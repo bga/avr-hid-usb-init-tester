@@ -1,3 +1,5 @@
+https://www.obdev.at/products/vusb/hidkeys.html
+
 This is the README file for the HIDKeys USB device.
 
 HIDKeys is an example application for implementing an USB keyboard conforming
