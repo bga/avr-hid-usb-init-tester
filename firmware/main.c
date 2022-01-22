@@ -8,74 +8,63 @@
  * This Revision: $Id$
  */
 
+#include <stdint.h>
+#include <stdbool.h>
+
 #include <avr/io.h>
 #include <avr/interrupt.h>
 #include <avr/pgmspace.h>
 #include <avr/wdt.h>
+#include <util/delay.h>
 
 #include "usbdrv.h"
-#include "oddebug.h"
+// #include "oddebug.h"
+#include "config.h"
 
-/* ----------------------- hardware I/O abstraction ------------------------ */
+// #define _BV(bitNoArg) (1UL << (bitNoArg))
 
-/* pin assignments:
-PB0	Key 1
-PB1	Key 2
-PB2	Key 3
-PB3	Key 4
-PB4	Key 5
-PB5 Key 6
+void StatusLed_on() {
+	STATUS_LED__PORT |= _BV(StatusLed_pin);
+}
+void StatusLed_off() {
+	STATUS_LED__PORT &= ~_BV(StatusLed_pin);
+}
+void StatusLed_toggle() {
+	STATUS_LED__PORT ^= _BV(StatusLed_pin);
+}
 
-PC0	Key 7
-PC1	Key 8
-PC2	Key 9
-PC3	Key 10
-PC4	Key 11
-PC5	Key 12
+enum {
+	timeQuant_ms = 20, 
+};
 
-PD0	USB-
-PD1	debug tx
-PD2	USB+ (int0)
-PD3	Key 13
-PD4	Key 14
-PD5	Key 15
-PD6	Key 16
-PD7	Key 17
-*/
+#define msToTicksCount(msArg) ((msArg) / timeQuant_ms)
 
-static void hardwareInit(void) {
-	uchar	i, j;
+
+void Timer_init() {
+	TCCR0A = TCCR0B = 0;
 	
-	PORTB = 0xff;   /* activate all pull-ups */
-	DDRB = 0;       /* all pins input */
-	PORTD = 0xfa;   /* 1111 1010 bin: activate pull-ups except on USB lines */
-	DDRD = 0x07;    /* 0000 0111 bin: all pins input except USB (-> USB reset) */
-	j = 0;
-	while(--j) {    /* USB Reset by device only required on Watchdog Reset */
-		i = 0;
-		while(--i); /* delay >10ms for USB reset */
-	}
-	DDRD = 0x02;    /* 0000 0010 bin: remove USB reset condition */
-	/* configure timer 0 for a rate of 12M/(1024 * 256) = 45.78 Hz (~22ms) */
-	// TCCR0 = 5;      /* timer 0 prescaler: 1024 */
+	//prescale timer to 1024   
+	TCCR0B |= _BV(CS02) | _BV(CS00);    
+	
+	// set compare match register for 1000 Hz increments
+	const uint8_t counter = F_CPU / (1024UL * (1000 / timeQuant_ms));
+	// static_assert(counter < 256, "timer counter should be less 256");
+	// static_assert(1 < counter, "timer counter should be more than 1");
+	OCR0A = counter - 1;
+	
+	// turn on CTC mode
+	TCCR0A |= _BV(WGM01);
+
+	//enable timer overflow interrupt   
+	TIMSK = _BV(OCIE0A);   
+	
 }
 
-/* ------------------------------------------------------------------------- */
+void timerThread();
 
-#define NUM_KEYS    17
-
-/* The following function returns an index for the first key pressed. It
- * returns 0 if no key is pressed.
- */
-static uchar    keyPressed(void) {
+ISR(TIMER0_COMPA_vect){
+	timerThread();
 }
-
-/* ------------------------------------------------------------------------- */
-/* ----------------------------- USB interface ----------------------------- */
-/* ------------------------------------------------------------------------- */
-
-static uchar    reportBuffer[2];    /* buffer for HID reports */
-static uchar    idleRate;           /* in 4 ms units */
 
 const PROGMEM char usbHidReportDescriptor[35] = {   /* USB report descriptor */
 	0x05, 0x01,                    // USAGE_PAGE (Generic Desktop)
@@ -107,96 +96,38 @@ const PROGMEM char usbHidReportDescriptor[35] = {   /* USB report descriptor */
  * for the second INPUT item.
  */
 
-/* Keyboard usage values, see usb.org's HID-usage-tables document, chapter
- * 10 Keyboard/Keypad Page for more codes.
+void Hw_init() {
+	//# set cpu clock prescaler to 1
+	if(1) {
+		CLKPR = 0x80;
+		CLKPR = 0x00;
+	};
+
+	DDRB = _BV(StatusLed_pin);
+}
+
+/* The following function returns an index for the first key pressed. It
+ * returns 0 if no key is pressed.
  */
-#define MOD_CONTROL_LEFT    (1<<0)
-#define MOD_SHIFT_LEFT      (1<<1)
-#define MOD_ALT_LEFT        (1<<2)
-#define MOD_GUI_LEFT        (1<<3)
-#define MOD_CONTROL_RIGHT   (1<<4)
-#define MOD_SHIFT_RIGHT     (1<<5)
-#define MOD_ALT_RIGHT       (1<<6)
-#define MOD_GUI_RIGHT       (1<<7)
+static uchar    keyPressed(void) {
+	return 0;
+}
 
-#define KEY_A       4
-#define KEY_B       5
-#define KEY_C       6
-#define KEY_D       7
-#define KEY_E       8
-#define KEY_F       9
-#define KEY_G       10
-#define KEY_H       11
-#define KEY_I       12
-#define KEY_J       13
-#define KEY_K       14
-#define KEY_L       15
-#define KEY_M       16
-#define KEY_N       17
-#define KEY_O       18
-#define KEY_P       19
-#define KEY_Q       20
-#define KEY_R       21
-#define KEY_S       22
-#define KEY_T       23
-#define KEY_U       24
-#define KEY_V       25
-#define KEY_W       26
-#define KEY_X       27
-#define KEY_Y       28
-#define KEY_Z       29
-#define KEY_1       30
-#define KEY_2       31
-#define KEY_3       32
-#define KEY_4       33
-#define KEY_5       34
-#define KEY_6       35
-#define KEY_7       36
-#define KEY_8       37
-#define KEY_9       38
-#define KEY_0       39
+/* ------------------------------------------------------------------------- */
+/* ----------------------------- USB interface ----------------------------- */
+/* ------------------------------------------------------------------------- */
 
-#define KEY_F1      58
-#define KEY_F2      59
-#define KEY_F3      60
-#define KEY_F4      61
-#define KEY_F5      62
-#define KEY_F6      63
-#define KEY_F7      64
-#define KEY_F8      65
-#define KEY_F9      66
-#define KEY_F10     67
-#define KEY_F11     68
-#define KEY_F12     69
-
-static const uchar  keyReport[NUM_KEYS + 1][2] PROGMEM = {
-	/* none */  {0, 0},                     /* no key pressed */
-	/*  1 */    {MOD_SHIFT_LEFT, KEY_A},
-	/*  2 */    {MOD_SHIFT_LEFT, KEY_B},
-	/*  3 */    {MOD_SHIFT_LEFT, KEY_C},
-	/*  4 */    {MOD_SHIFT_LEFT, KEY_D},
-	/*  5 */    {MOD_SHIFT_LEFT, KEY_E},
-	/*  6 */    {MOD_SHIFT_LEFT, KEY_F},
-	/*  7 */    {MOD_SHIFT_LEFT, KEY_G},
-	/*  8 */    {MOD_SHIFT_LEFT, KEY_H},
-	/*  9 */    {MOD_SHIFT_LEFT, KEY_I},
-	/* 10 */    {MOD_SHIFT_LEFT, KEY_J},
-	/* 11 */    {MOD_SHIFT_LEFT, KEY_K},
-	/* 12 */    {MOD_SHIFT_LEFT, KEY_L},
-	/* 13 */    {MOD_SHIFT_LEFT, KEY_M},
-	/* 14 */    {MOD_SHIFT_LEFT, KEY_N},
-	/* 15 */    {MOD_SHIFT_LEFT, KEY_O},
-	/* 16 */    {MOD_SHIFT_LEFT, KEY_P},
-	/* 17 */    {MOD_SHIFT_LEFT, KEY_Q},
-};
+static uchar    reportBuffer[2];    /* buffer for HID reports */
+static uchar    idleRate;           /* in 4 ms units */
 
 static void buildReport(uchar key) {
 	/* This (not so elegant) cast saves us 10 bytes of program memory */
-	*(int*)reportBuffer = pgm_read_word(keyReport[key]);
+	// *(int*)reportBuffer = pgm_read_word(keyReport[key]);
+	*(int*)reportBuffer = 0;
 }
 
 uchar	usbFunctionSetup(uchar data[8]) {
-	usbRequest_t*    rq = (void*)data;
+	usbRequest_t* rq = (void*)data;
 	
 	usbMsgPtr = reportBuffer;
 	if((rq->bmRequestType & USBRQ_TYPE_MASK) == USBRQ_TYPE_CLASS) {   /* class request type */
@@ -219,29 +150,52 @@ uchar	usbFunctionSetup(uchar data[8]) {
 	return 0;
 }
 
-/* ------------------------------------------------------------------------- */
+uint8_t idleCounterLimit = msToTicksCount(idleCounterLimit_noSetup_ms);
+
+void Usb_Config_setAddressCallback() {
+	// StatusLed_off();
+	idleCounterLimit = msToTicksCount(idleCounterLimit_afterSetup_ms);
+} 
+
+volatile uint8_t Usb_sofWasCatched = 0;
+uint8_t idleCounter = 0;
+
+void timerThread() {
+	if(++idleCounter >= idleCounterLimit) {
+		idleCounter = 0;
+		if(Usb_sofWasCatched) {
+			Usb_sofWasCatched = 0;
+			StatusLed_toggle();
+		};
+	};
+}
+
 
 int	main(void) {
-	uchar   key, lastKey = 0, keyDidChange = 0;
-	uint16_t idleCounter = 0;
-  uchar index = 0;
+	cli();
+	wdt_enable(WDTO_1S); // enable 1s watchdog timer
 	
-	wdt_enable(WDTO_2S);
-	hardwareInit();
-	odDebugInit();
+	Hw_init();
+	Timer_init();	
+	
+	StatusLed_on();
+    
+	if(0) {
+		sei();
+		while(1) wdt_reset();
+	};
 	usbInit();
-	sei();
-	DBG1(0x00, 0, 0);
-	for(;;) {	/* main event loop */
-		wdt_reset();
+	
+	usbDeviceDisconnect(); // enforce re-enumeration
+	// wait 500 ms, watchdog is set to 1 sec, so no wdt_reset() calls are required
+	_delay_ms(500);	
+	usbDeviceConnect();
+
+	sei(); // Enable interrupts after re-enumeration
+
+	while (1) {
+		wdt_reset(); // keep the watchdog happy
 		usbPoll();
-		if(++idleCounter == 2000 && usbInterruptIsReady()) {
-      idleCounter = 0;
-      buildReport(1);
-			usbSetInterrupt(reportBuffer, sizeof(reportBuffer));
-		}
 	}
 	return 0;
 }
-
-/* ------------------------------------------------------------------------- */

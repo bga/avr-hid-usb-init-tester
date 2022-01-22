@@ -11,6 +11,27 @@
 #ifndef __usbconfig_h_included__
 #define __usbconfig_h_included__
 
+#ifndef __ASSEMBLER__
+	#include <stdint.h>
+
+	// extern void Usb_Config_rxCallback(const uint8_t* data, uint16_t len);
+	// #define USB_RX_USER_HOOK(dataArg, lenArg) Usb_Config_rxCallback(dataArg, lenArg);
+	extern void Usb_Config_setAddressCallback();
+	#define USB_SET_ADDRESS_HOOK() Usb_Config_setAddressCallback();
+#endif
+
+
+#define USB_SOF_HOOK Usb_sofCallback
+#ifndef __ASSEMBLER__
+	extern volatile uint8_t Usb_sofWasCatched;
+#endif
+#ifdef __ASSEMBLER__
+	macro Usb_sofCallback
+    ldi     YL, 1
+    sts     Usb_sofWasCatched, YL
+	endm
+#endif
+
 /*
 General Description:
 This file contains parts of the USB driver which can be configured and can or
@@ -29,11 +50,11 @@ the newest features and options.
 /* This is the port where the USB bus is connected. When you configure it to
  * "B", the registers PORTB, PINB and DDRB will be used.
  */
-#define USB_CFG_DMINUS_BIT      1
+#define USB_CFG_DMINUS_BIT      2
 /* This is the bit number in USB_CFG_IOPORT where the USB D- line is connected.
  * This may be any bit in the port.
  */
-#define USB_CFG_DPLUS_BIT       2
+#define USB_CFG_DPLUS_BIT       0
 /* This is the bit number in USB_CFG_IOPORT where the USB D+ line is connected.
  * This may be any bit in the port. Please note that D+ must also be connected
  * to interrupt pin INT0!
