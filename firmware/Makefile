@@ -8,7 +8,7 @@
 # This Revision: $Id$
 
 SERIAL = `echo /dev/tty.KeySerial*`
-UISP = uisp -dprog=avr910 -dserial=$(SERIAL) -dpart=auto
+UISP = avrdude -v -pt2313 -cavrisp -P$(SERIAL) -b19200
 # The two lines above are for "uisp" and the AVR910 serial programmer connected
 # to a Keyspan USB to serial converter to a Mac running Mac OS X.
 # Choose your favorite programmer and interface.
@@ -35,7 +35,7 @@ all:	main.hex
 	$(COMPILE) -S $< -o $@
 
 flash:	all
-	avrdude -v -pt2313 -cavrisp -P$(PORT) -b19200 -Uflash:w:"main.hex"
+	$(UISP) -Uflash:w:"main.hex"
 
 # 	$(UISP) --erase --upload if=main.hex
 #	$(UISP) --erase --upload --verify if=main.hex
@@ -57,7 +57,7 @@ flash:	all
 #        | +------------------ BODEN (BrownOut Detector enabled)
 #        +-------------------- BODLEVEL (2.7V)
 fuse:
-	$(UISP) --wr_fuse_h=0xc9 --wr_fuse_l=0x9f
+	$(UISP) -U lfuse:w:0xFF:m -U hfuse:w:0x89:m
 
 clean:
 	rm -f main.hex main.lst main.obj main.cof main.list main.map main.eep.hex main.bin *.o usbdrv/*.o main.s usbdrv/oddebug.s usbdrv/usbdrv.s
