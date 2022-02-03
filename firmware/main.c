@@ -33,6 +33,17 @@ void StatusLed_toggle() {
 	STATUS_LED__PORT ^= _BV(StatusLed_pin);
 }
 
+void StatusLed2_on() {
+	STATUS_LED2__PORT |= _BV(StatusLed2_pin);
+}
+void StatusLed2_off() {
+	STATUS_LED2__PORT &= ~_BV(StatusLed2_pin);
+}
+void StatusLed2_toggle() {
+	STATUS_LED2__PORT ^= _BV(StatusLed2_pin);
+}
+
+
 enum {
 	timeQuant_ms = 20, 
 };
@@ -103,7 +114,7 @@ void Hw_init() {
 		CLKPR = 0x00;
 	};
 
-	DDRB = _BV(StatusLed_pin);
+	DDRB = _BV(StatusLed_pin) | _BV(StatusLed2_pin);
 }
 
 /* The following function returns an index for the first key pressed. It
@@ -153,12 +164,17 @@ uchar	usbFunctionSetup(uchar data[8]) {
 uint8_t idleCounterLimit = msToTicksCount(idleCounterLimit_noSetup_ms);
 
 void Usb_Config_setAddressCallback() {
-	// StatusLed_off();
+	StatusLed2_on();
 	idleCounterLimit = msToTicksCount(idleCounterLimit_afterSetup_ms);
 } 
 
 volatile uint8_t Usb_sofWasCatched = 0;
 uint8_t idleCounter = 0;
+
+
+void Usb_Config_rxCallback(const uint8_t* data, uint16_t len) {
+	Usb_sofWasCatched = true;
+}
 
 void timerThread() {
 	if(++idleCounter >= idleCounterLimit) {
@@ -179,6 +195,7 @@ int	main(void) {
 	Timer_init();	
 	
 	StatusLed_on();
+	StatusLed2_off();
     
 	if(0) {
 		sei();
