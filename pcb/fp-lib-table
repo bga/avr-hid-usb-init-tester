@@ -1,0 +1,4 @@
+(fp_lib_table
+  (lib (name aa)(type KiCad)(uri ${KIPRJMOD}/local/project)(options "")(descr ""))
+  (lib (name pcb)(type KiCad)(uri ${KIPRJMOD}/pcb.pretty)(options "")(descr ""))
+)
