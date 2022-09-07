@@ -7,7 +7,7 @@
 # License: GNU GPL v2 (see License.txt) or proprietary (CommercialLicense.txt)
 # This Revision: $Id$
 
-SERIAL = `echo /dev/tty.KeySerial*`
+SERIAL ?= `echo /dev/tty.KeySerial*`
 UISP = avrdude -v -pt2313 -cavrisp -P$(SERIAL) -b19200
 # The two lines above are for "uisp" and the AVR910 serial programmer connected
 # to a Keyspan USB to serial converter to a Mac running Mac OS X.
