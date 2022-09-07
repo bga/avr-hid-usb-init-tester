@@ -60,7 +60,7 @@ fuse:
 	$(UISP) -U lfuse:w:0xFF:m -U hfuse:w:0x89:m
 
 clean:
-	rm -f main.hex main.lst main.obj main.cof main.list main.map main.eep.hex main.bin *.o usbdrv/*.o main.s usbdrv/oddebug.s usbdrv/usbdrv.s
+	rm -f main.hex main.lst main.obj main.cof main.list main.map main.eep.hex main.bin $(OBJECTS) main.s usbdrv/oddebug.s usbdrv/usbdrv.s
 
 # file targets:
 main.bin:	$(OBJECTS)
