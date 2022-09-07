@@ -15,23 +15,23 @@ UISP = avrdude -v -pt2313 -cavrisp -P$(SERIAL) -b19200
 
 COMPILE = avr-gcc -Wall -Wextra -Wno-unused-variable -Os -Iusbdrv -I. -mmcu=attiny2313 -DF_CPU=12000000L #-DDEBUG_LEVEL=1
 
-OBJECTS = usbdrv/usbdrv.o usbdrv/usbdrvasm.o usbdrv/oddebug.o main.o
+OBJECTS = usbdrv/usbdrv.c.o usbdrv/usbdrvasm.S.o usbdrv/oddebug.c.o main.c.o
 
 
 # symbolic targets:
 all:	main.hex
 
-.c.o:
+%.c.o: %.c
 	$(COMPILE) -c $< -o $@
 
-.S.o:
+%.S.o: %.S
 	$(COMPILE) -x assembler-with-cpp -c $< -o $@
 # "-x assembler-with-cpp" should not be necessary since this is the default
 # file type for the .S (with capital S) extension. However, upper case
 # characters are not always preserved on Windows. To ensure WinAVR
 # compatibility define the file type manually.
 
-.c.s:
+%.c.s: %.c
 	$(COMPILE) -S $< -o $@
 
 flash:	all
