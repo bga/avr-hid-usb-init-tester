@@ -245,6 +245,9 @@ USB_PUBLIC usbMsgLen_t usbFunctionDescriptor(struct usbRequest* rq);
 		/* Same as above for endpoint 3 */
 	#endif
 #endif /* USB_CFG_HAVE_INTRIN_ENDPOINT */
+#ifndef USB_CFG_HID_DESC_VER
+	#define USB_CFG_HID_DESC_VER 0x01, 0x01
+#endif
 #if USB_CFG_HID_REPORT_DESCRIPTOR_LENGTH    /* simplified interface for backward compatibility */
 	#define usbHidReportDescriptor  usbDescriptorHidReport
 	/* should be declared as: PROGMEM char usbHidReportDescriptor[]; */

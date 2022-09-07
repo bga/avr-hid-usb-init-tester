@@ -180,11 +180,12 @@ the newest features and options.
 /* See USB specification if you want to conform to an existing device class.
  */
 #define USB_CFG_INTERFACE_CLASS     0x03    /* HID class */
-#define USB_CFG_INTERFACE_SUBCLASS  0       /* no boot interface */
-#define USB_CFG_INTERFACE_PROTOCOL  0       /* no protocol */
+#define USB_CFG_INTERFACE_SUBCLASS  1       /* boot interface */
+#define USB_CFG_INTERFACE_PROTOCOL  1       /* kbd */
 /* See USB specification if you want to conform to an existing device class or
  * protocol.
  */
+#define USB_CFG_HID_DESC_VER 0x11, 0x01 
 #define USB_CFG_HID_REPORT_DESCRIPTOR_LENGTH    35  /* total length of report descriptor */
 /* Define this to the length of the HID report descriptor, if you implement
  * an HID device. Otherwise don't define it or define it to 0.
