@@ -383,19 +383,6 @@ Wire Wire Line
 	4650 3100 4650 3500
 Wire Wire Line
 	4250 3100 4250 3500
-Wire Wire Line
-	6250 3750 6000 3750
-$Comp
-L power:+3.3V #PWR0105
-U 1 1 619133B6
-P 7350 2000
-F 0 "#PWR0105" H 7350 1850 50  0001 C CNN
-F 1 "+3.3V" H 7365 2173 50  0000 C CNN
-F 2 "" H 7350 2000 50  0001 C CNN
-F 3 "" H 7350 2000 50  0001 C CNN
-	1    7350 2000
-	1    0    0    -1  
-$EndComp
 Text GLabel 6250 3450 2    50   Input ~ 0
 led
 $Comp
